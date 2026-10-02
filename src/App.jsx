@@ -21,7 +21,8 @@ import {
   Landmark,
   Trash2,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Star // Ícone da estrela adicionado
 } from 'lucide-react';
 import './index.css';
 
@@ -48,11 +49,13 @@ function App() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  // === ESTADOS PARA OS DROPDOWNS DA SIDEBAR ===
   const [isStringsOpen, setIsStringsOpen] = useState(true);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(true);
   
-  // === INICIALIZAÇÃO DOS DADOS DO NAVEGADOR (LOCAL STORAGE) ===
+  // === ESTADO PARA AS ESTRELAS (HOVER) ===
+  const [hoveredRating, setHoveredRating] = useState(0);
+  
+  // === INICIALIZAÇÃO DO LOCAL STORAGE ===
   const [savedStrings, setSavedStrings] = useState(() => {
     const saved = localStorage.getItem('chcm_savedStrings');
     return saved ? JSON.parse(saved) : [];
@@ -68,6 +71,12 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Novo estado para salvar as avaliações dos documentos
+  const [docRatings, setDocRatings] = useState(() => {
+    const saved = localStorage.getItem('chcm_docRatings');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   // === SALVAMENTO AUTOMÁTICO NO NAVEGADOR ===
   useEffect(() => {
     localStorage.setItem('chcm_savedStrings', JSON.stringify(savedStrings));
@@ -81,11 +90,15 @@ function App() {
     localStorage.setItem('chcm_searchHistory', JSON.stringify(searchHistory));
   }, [searchHistory]);
 
-  // === FUNÇÕES DE AÇÃO DA SIDEBAR ===
+  useEffect(() => {
+    localStorage.setItem('chcm_docRatings', JSON.stringify(docRatings));
+  }, [docRatings]);
+
+  // === FUNÇÕES DE AÇÃO ===
   const handleSaveString = () => {
     if (currentSearch && !savedStrings.includes(currentSearch)) {
       setSavedStrings(prev => [...prev, currentSearch]);
-      setIsStringsOpen(true); // Abre o dropdown automaticamente ao salvar
+      setIsStringsOpen(true);
     }
   };
 
@@ -94,8 +107,15 @@ function App() {
       setFavoriteDocs(prev => prev.filter(d => d.id !== doc.id));
     } else {
       setFavoriteDocs(prev => [...prev, doc]);
-      setIsFavoritesOpen(true); // Abre o dropdown automaticamente ao salvar
+      setIsFavoritesOpen(true);
     }
+  };
+
+  const handleRateDoc = (docId, rating) => {
+    setDocRatings(prev => ({
+      ...prev,
+      [docId]: rating
+    }));
   };
 
   const handleRestoreSearch = (query) => {
@@ -181,17 +201,22 @@ function App() {
 
           <div className="flex-1 overflow-y-auto flex flex-col gap-6 pt-2">
             
-            {/* UC2/UC8: Strings de Busca (Dropdown) */}
             <div className="px-6">
-              <button 
-                onClick={() => setIsStringsOpen(!isStringsOpen)}
-                className="flex items-center justify-between w-full text-left gap-2 text-[0.95rem] font-semibold text-black mb-3 hover:text-gray-600 transition-colors"
-              >
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between mb-3 w-full">
+                <button 
+                  onClick={() => setIsStringsOpen(!isStringsOpen)}
+                  className="flex items-center gap-2 text-[0.95rem] font-semibold text-black hover:text-gray-600 transition-colors text-left"
+                >
                   <Type size={18} strokeWidth={2} /> Strings de Busca Salva
-                </div>
-                {isStringsOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
-              </button>
+                  {isStringsOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+                </button>
+                
+                {savedStrings.length > 0 && (
+                  <button onClick={() => setSavedStrings([])} className="text-gray-400 hover:text-red-500 transition-colors" title="Limpar Strings">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
               
               {isStringsOpen && (
                 <ul className="space-y-2 animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
@@ -214,17 +239,22 @@ function App() {
               )}
             </div>
 
-            {/* UC3/UC5: Arquivos Favoritos (Dropdown) */}
             <div className="px-6">
-              <button 
-                onClick={() => setIsFavoritesOpen(!isFavoritesOpen)}
-                className="flex items-center justify-between w-full text-left gap-2 text-[0.95rem] font-semibold text-black mb-3 hover:text-gray-600 transition-colors"
-              >
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between mb-3 w-full">
+                <button 
+                  onClick={() => setIsFavoritesOpen(!isFavoritesOpen)}
+                  className="flex items-center gap-2 text-[0.95rem] font-semibold text-black hover:text-gray-600 transition-colors text-left"
+                >
                   <Archive size={18} strokeWidth={2} /> Arquivos Favoritos
-                </div>
-                {isFavoritesOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
-              </button>
+                  {isFavoritesOpen ? <ChevronDown size={16} className="text-gray-400" /> : <ChevronRight size={16} className="text-gray-400" />}
+                </button>
+                
+                {favoriteDocs.length > 0 && (
+                  <button onClick={() => setFavoriteDocs([])} className="text-gray-400 hover:text-red-500 transition-colors" title="Limpar Favoritos">
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
 
               {isFavoritesOpen && (
                 <ul className="space-y-2 animate-fade-in-up" style={{ animationDuration: '0.2s' }}>
@@ -247,7 +277,6 @@ function App() {
               )}
             </div>
 
-            {/* UC9: Nova Busca */}
             <div className="px-6 mt-2">
               <button 
                 onClick={handleNovaBusca} 
@@ -257,7 +286,6 @@ function App() {
               </button>
             </div>
 
-            {/* Histórico de Buscas Dinâmico */}
             <div className="px-6 mt-2 pb-6">
               <div className="flex justify-between items-center mb-3">
                 <div className="text-[0.95rem] font-semibold text-black">Histórico de Buscas</div>
@@ -464,20 +492,78 @@ function App() {
                   </div>
                   <h4 className="text-xl font-medium text-black leading-tight pt-1">{selectedDoc.title}</h4>
                 </div>
+
                 <div className="space-y-6">
                   <div>
                     <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Breve Descrição</h5>
-                    <p className="text-gray-700 text-[0.95rem] leading-relaxed">Este é um resumo gerado dinamicamente para o documento...</p>
+                    <p className="text-gray-700 text-[0.95rem] leading-relaxed">
+                      Este é um resumo gerado dinamicamente para o documento. 
+                      Quando a integração com o motor de busca semântica estiver pronta, 
+                      este espaço exibirá o contexto do porquê este arquivo foi retornado para a sua pesquisa.
+                    </p>
                   </div>
+
                   <div>
                     <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Metadados</h5>
                     <ul className="text-[0.95rem] text-gray-700 space-y-3">
-                      <li className="flex justify-between border-b border-gray-50 pb-2"><span className="text-gray-500">Gênero</span><span className="font-medium text-black">Relatório Técnico</span></li>
-                      <li className="flex justify-between border-b border-gray-50 pb-2"><span className="text-gray-500">Ano</span><span className="font-medium text-black">1974</span></li>
+                      <li className="flex justify-between border-b border-gray-50 pb-2">
+                        <span className="text-gray-500">Gênero</span><span className="font-medium text-black">Relatório Técnico</span>
+                      </li>
+                      <li className="flex justify-between border-b border-gray-50 pb-2">
+                        <span className="text-gray-500">Ano</span><span className="font-medium text-black">1974</span>
+                      </li>
+                      <li className="flex justify-between border-b border-gray-50 pb-2">
+                        <span className="text-gray-500">Acervo</span><span className="font-medium text-black">CHCM</span>
+                      </li>
                     </ul>
                   </div>
+
+                  {/* === NOVA SEÇÃO: AVALIAÇÃO DA RECOMENDAÇÃO === */}
+                  <div className="mt-6 border-t border-gray-100 pt-6">
+                    <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Avalie esta Recomendação</h5>
+                    <p className="text-[0.85rem] text-gray-500 mb-3">Este documento é relevante para o contexto da sua busca?</p>
+                    <div 
+                      className="flex items-center gap-1"
+                      onMouseLeave={() => setHoveredRating(0)}
+                    >
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const currentRating = docRatings[selectedDoc.id] || 0;
+                        const isFilled = (hoveredRating || currentRating) >= star;
+                        return (
+                          <button
+                            key={star}
+                            type="button"
+                            onMouseEnter={() => setHoveredRating(star)}
+                            onClick={() => handleRateDoc(selectedDoc.id, star)}
+                            className="transition-transform hover:scale-110 focus:outline-none p-1"
+                            title={`Avaliar com ${star} estrela${star > 1 ? 's' : ''}`}
+                          >
+                            <Star 
+                              size={26} 
+                              strokeWidth={1.5}
+                              className={`transition-colors ${isFilled ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-200'}`}
+                              fill={isFilled ? 'currentColor' : 'none'}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {docRatings[selectedDoc.id] && (
+                      <span className="text-xs font-medium text-green-600 mt-3 block animate-fade-in-up">
+                        Obrigado pelo seu feedback! Isso ajuda a treinar nossa IA.
+                      </span>
+                    )}
+                  </div>
+
                 </div>
               </div>
+
+              <div className="p-6 border-t border-gray-100 bg-gray-50">
+                <button className="w-full bg-white border border-gray-300 hover:border-gray-800 text-black py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-colors shadow-sm">
+                  <Quote size={18} strokeWidth={1.5} /> Obter Citação (ABNT)
+                </button>
+              </div>
+              
             </aside>
           </>
         )}
